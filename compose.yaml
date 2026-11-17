@@ -1,0 +1,122 @@
+name: flowharbor
+
+x-engine-env: &engine-env
+  TZ: Asia/Shanghai
+  CRAWLAB_MONGO_HOST: mongo
+  CRAWLAB_MONGO_PORT: "27017"
+  CRAWLAB_MONGO_DB: crawlab
+  CRAWLAB_MONGO_USERNAME: root
+  CRAWLAB_MONGO_PASSWORD: ${MONGO_PASSWORD:?Run python scripts/configure.py first}
+  CRAWLAB_MONGO_AUTHSOURCE: admin
+  CRAWLAB_GRPC_AUTHKEY: ${ENGINE_AUTH_KEY:?Run python scripts/configure.py first}
+  CRAWLAB_FS_FILER_AUTHKEY: ${ENGINE_AUTH_KEY:?Run python scripts/configure.py first}
+
+x-engine: &engine
+  image: flowharbor-engine:0.1.0
+  build:
+    context: .
+    dockerfile: deploy/engine.Dockerfile
+    args:
+      CRAWLAB_IMAGE: ${CRAWLAB_IMAGE:-crawlabteam/crawlab:0.6.3@sha256:9dbe97240ba2670ce49fd1be5d557b59653e602d8fa29a71c9e05b26c557193b}
+  restart: unless-stopped
+
+services:
+  web:
+    image: flowharbor-web:0.1.0
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    image: flowharbor-api:0.1.0
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    environment:
+      CRAWLAB_BASE_URL: http://master:8080/api
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      FLOWHARBOR_PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      FLOWHARBOR_SESSION_SECRET: ${SESSION_SECRET:?Run python scripts/configure.py first}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      master:
+        condition: service_started
+    restart: unless-stopped
+
+  master:
+    <<: *engine
+    environment:
+      <<: *engine-env
+      CRAWLAB_NODE_MASTER: "Y"
+      CRAWLAB_NODE_NAME: master
+    ports:
+      - "127.0.0.1:${ENGINE_PORT:-18080}:8080"
+    volumes:
+      - master-identity:/root/.crawlab
+      - master-files:/data
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  worker-01:
+    <<: *engine
+    environment:
+      <<: *engine-env
+      CRAWLAB_NODE_MASTER: "N"
+      CRAWLAB_NODE_NAME: worker-01
+      CRAWLAB_GRPC_ADDRESS: master:9666
+      CRAWLAB_FS_FILER_URL: http://master:8080/api/filer
+    volumes:
+      - worker-01-identity:/root/.crawlab
+    depends_on:
+      - master
+
+  worker-02:
+    <<: *engine
+    environment:
+      <<: *engine-env
+      CRAWLAB_NODE_MASTER: "N"
+      CRAWLAB_NODE_NAME: worker-02
+      CRAWLAB_GRPC_ADDRESS: master:9666
+      CRAWLAB_FS_FILER_URL: http://master:8080/api/filer
+    volumes:
+      - worker-02-identity:/root/.crawlab
+    depends_on:
+      - master
+
+  mongo:
+    image: mongo:4.4.29
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Run python scripts/configure.py first}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "quit(db.adminCommand({ping:1}).ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  fixture:
+    image: nginx:1.28.0-alpine
+    volumes:
+      - ./examples/fixture:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  master-identity:
+  master-files:
+  worker-01-identity:
+  worker-02-identity:

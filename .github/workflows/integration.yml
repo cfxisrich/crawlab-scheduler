@@ -1,0 +1,46 @@
+name: Live Crawlab acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements-dev.txt
+      - run: python scripts/configure.py
+      - run: docker compose up -d --build
+      - name: Wait for the engine
+        shell: bash
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent -X POST http://localhost:8080/api/login \
+              -H 'Content-Type: application/json' -H 'X-FlowHarbor-Request: 1' \
+              -d '{"username":"admin","password":"admin"}' >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Run the real engine lifecycle
+        run: python -m pytest tests/integration -v
+        env:
+          FLOWHARBOR_INTEGRATION: "1"
+          FLOWHARBOR_TEST_URL: http://localhost:8080
+          FLOWHARBOR_TEST_USERNAME: admin
+          FLOWHARBOR_TEST_PASSWORD: admin
+      - name: Capture service logs
+        if: always()
+        run: docker compose logs --no-color > integration-services.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-logs
+          path: integration-services.log
+      - run: docker compose down -v
+        if: always()

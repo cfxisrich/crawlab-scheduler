@@ -1,0 +1,82 @@
+[
+  {
+    "name": "annotated-types",
+    "version": "0.8.0",
+    "license": "MIT"
+  },
+  {
+    "name": "anyio",
+    "version": "4.16.0",
+    "license": "MIT"
+  },
+  {
+    "name": "certifi",
+    "version": "2026.10.23",
+    "license": "MPL-2.0"
+  },
+  {
+    "name": "click",
+    "version": "8.5.1",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "fastapi",
+    "version": "0.115.12",
+    "license": "See included license text"
+  },
+  {
+    "name": "h11",
+    "version": "0.16.0",
+    "license": "MIT"
+  },
+  {
+    "name": "httpcore",
+    "version": "1.0.9",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "httpx",
+    "version": "0.28.1",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "idna",
+    "version": "3.20",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "itsdangerous",
+    "version": "2.2.0",
+    "license": "See included license text"
+  },
+  {
+    "name": "pydantic",
+    "version": "2.11.4",
+    "license": "MIT"
+  },
+  {
+    "name": "pydantic-core",
+    "version": "2.33.2",
+    "license": "MIT"
+  },
+  {
+    "name": "starlette",
+    "version": "0.46.2",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "name": "typing-extensions",
+    "version": "4.16.0",
+    "license": "PSF-2.0"
+  },
+  {
+    "name": "typing-inspection",
+    "version": "0.4.5",
+    "license": "MIT"
+  },
+  {
+    "name": "uvicorn",
+    "version": "0.34.2",
+    "license": "BSD-3-Clause"
+  }
+]
